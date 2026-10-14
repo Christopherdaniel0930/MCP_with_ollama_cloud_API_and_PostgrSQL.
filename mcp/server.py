@@ -21,6 +21,29 @@ def list_products() -> list[dict]:
             return cur.execute("SELECT * FROM Products").fetchall()
 
 @mcp.tool()
+def list_customers() -> list[dict]:
+    """List all customers with all columns available in the database."""
+    with get_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            return cur.execute("SELECT DISTINCT cust_name FROM Customers").fetchall()
+
+@mcp.tool()
+def customers_pnl_summary() -> list[dict]:
+    """Get a summary of customers with their total sales, total cost, and PNL."""
+    with get_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            return cur.execute("""
+                SELECT 
+                    Customers.cust_name AS name,
+                    SUM(Products.MRP * Customers.quantity) AS total_sales,
+                    SUM(Products.CP * Customers.quantity) AS total_cost,
+                    SUM((Products.MRP - Products.CP) * Customers.quantity) AS pnl
+                FROM Customers
+                JOIN Products ON LOWER(Customers.p_name) = LOWER(Products.p_name)
+                GROUP BY Customers.cust_name;
+            """).fetchall()
+
+@mcp.tool()
 def search_customer(name: str) -> dict | None:
     """Search for a customer by their name."""
     with get_connection() as conn:
@@ -55,24 +78,28 @@ def get_business_summary() -> dict:
         }
 
 @mcp.tool()
-def add_customer(name: str, order_id: str, product: str) -> dict:
-    """Add a new customer with their order and product."""
+def add_customer(name: str, order_id: str, product: str, quantity: int = 1) -> dict:
+    """Add a new customer with their order and product. Defaults to quantity 1 if not specified."""
+    if not quantity or quantity <= 0:
+        quantity = 1
     with get_connection() as conn:
         conn.execute(
-            "INSERT INTO Customers (cust_name, order_id, p_name) VALUES (%s, %s, LOWER(%s))",
-            (name, order_id, product)
+            "INSERT INTO Customers (cust_name, order_id, p_name, quantity) VALUES (%s, %s, LOWER(%s), %s)",
+            (name, order_id, product, quantity)
         )
-        return {"name": name, "order_id": order_id, "product": product}
+        return {"name": name, "order_id": order_id, "product": product, "quantity": quantity}
 
 @mcp.tool()
-def update_customer_order(name: str, new_order_id: str, new_product: str, quantity = 0) -> dict | None:
+def update_customer_order(name: str, new_order_id: str, new_product: str, quantity: int = 0) -> dict | None:
     """Update an existing customer's order and product."""
     with get_connection() as conn:
-        if quantity == 0:
-            quantity = conn.execute(
+        if not quantity or quantity <= 0:
+            row = conn.execute(
                 "SELECT quantity FROM Customers WHERE cust_name = %s",
                 (name,)
             ).fetchone()
+            quantity = row[0] if (row and row[0] is not None and row[0] > 0) else 1
+
         result = conn.execute(
             "UPDATE Customers SET order_id = %s, p_name = LOWER(%s), quantity = %s WHERE cust_name = %s RETURNING cust_name, order_id, p_name, quantity",
             (new_order_id, new_product, quantity, name)

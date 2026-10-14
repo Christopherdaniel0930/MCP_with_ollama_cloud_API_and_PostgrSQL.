@@ -69,7 +69,7 @@ CREATE TABLE Customers (
     cust_name VARCHAR(100),
     order_id VARCHAR(50),
     p_name VARCHAR(100),
-    quantity INTEGER
+    quantity INTEGER DEFAULT 1
 );
 
 -- Sample Data: Products
