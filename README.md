@@ -161,7 +161,7 @@ uv sync
 
 Or using standard `pip`:
 ```bash
-pip install fastmcp openai psycopg[binary] python-dotenv
+pip install -r requirements.txt
 ```
 
 ---
