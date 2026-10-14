@@ -8,7 +8,10 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "fastmcp>=2.3.0rc1",
+    "fastmcp>=2.14.7",
+    "openai>=3.22.1",
+    "psycopg[binary]>=3.3.6",
+    "python-dotenv>=1.2.1",
 ]
 
 [project.scripts]

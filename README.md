@@ -90,9 +90,55 @@ INSERT INTO Customers (cust_name, order_id, p_name, quantity) VALUES
 ('Syed', 'ORD_1987', 'cpu', 3),
 ('Mohammed', 'ORD_1278', 'GPU', 3),
 ('Christo', 'ORD_8765', 'CPU', 1);
+
 ```
 
----
+```sql
+--Context data table
+
+CREATE TABLE IF NOT EXISTS public.chat_sessions (
+    session_id UUID PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_activity_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user
+ON public.chat_sessions (user_id, last_activity_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    session_id UUID NOT NULL
+        REFERENCES public.chat_sessions(session_id)
+        ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session
+ON public.chat_messages (session_id, id);
+
+
+CREATE TABLE IF NOT EXISTS public.context_memories (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    session_id UUID REFERENCES public.chat_sessions(session_id)
+        ON DELETE SET NULL,
+    memory_type TEXT NOT NULL,
+    memory_key TEXT,
+    content JSONB NOT NULL,
+    source_message_id BIGINT REFERENCES public.chat_messages(id)
+        ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_context_memories_user
+ON public.context_memories (user_id, updated_at DESC);
+
+```
 
 ## ⚙️ Configuration
 
